@@ -331,13 +331,8 @@ def serialize_promotion(promo):
 # -------------------------
 def setup_database(app):
     with app.app_context():
-        try:
-            # This query checks if the database is accessible.
-            # If not, the except block will create the tables.
-            User.query.first()
-        except Exception:
-            logger.info('db.create_all()')
-            db.create_all()
+        # Ensure all tables are created
+        db.create_all()
 
         # --- Seeding Logic ---
         # Create default user if it doesn't exist
@@ -1360,9 +1355,13 @@ app.register_blueprint(cart_bp)
 app.register_blueprint(checkout_bp)
 app.register_blueprint(countries_bp)
 # -------------------------
+# Initialize Database
+# -------------------------
+with app.app_context():
+    setup_database(app)
+
+# -------------------------
 # Start
 # -------------------------
 if __name__ == "__main__":
-    with app.app_context():
-        setup_database(app)
     app.run(host="0.0.0.0", port=5000)
