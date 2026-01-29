@@ -794,8 +794,9 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
     discount_cents = 0
     promo = None
     if promo_code:
-        promo = Promotion.query.filter_by(code=promo_code, is_active=True).first()
+        from .models import Order
         from datetime import datetime, timezone
+        promo = Promotion.query.filter_by(code=promo_code, is_active=True).first()
         if promo:
             promo_valid_to = promo.valid_to
             # Ensure timezone-aware comparison to avoid TypeError regarding aware vs naive datetimes
@@ -806,6 +807,11 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
                 promo = None  # expired
             elif promo.user_id is not None and promo.user_id != user_id:
                 promo = None  # not valid for this user
+            elif user_id:
+                # Check if user has already used this promo code
+                existing_usage = Order.query.filter_by(user_id=user_id, promo_code=promo_code).first()
+                if existing_usage:
+                    promo = None  # already used
 
     if promo:
         if promo.discount_type == 'PERCENT':

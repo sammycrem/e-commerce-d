@@ -36,6 +36,11 @@ def apply_promo():
     if promo.user_id is not None and promo.user_id != user_id:
         return jsonify({"error": "This promotion code is not valid for your account"}), 403
 
+    if user_id:
+        existing_usage = Order.query.filter_by(user_id=user_id, promo_code=code).first()
+        if existing_usage:
+            return jsonify({"error": "You have already used this promotion code"}), 403
+
     discount_cents = 0
     if promo.discount_type == 'PERCENT':
         from ..utils import cents_to_decimal, decimal_to_cents
@@ -66,7 +71,8 @@ def checkout():
     items = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     # calculate totals using helper
-    calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=body.get('promo_code'), user_id=user_id)
+    promo_code = body.get('promo_code')
+    calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=promo_code, user_id=user_id)
 
     subtotal = calc_res['subtotal_cents']
     discount = calc_res['discount_cents']
@@ -82,7 +88,8 @@ def checkout():
                 discount_cents=discount,
                 vat_cents=vat,
                 shipping_cost_cents=shipping_cost,
-                total_cents=total
+                total_cents=total,
+                promo_code=promo_code
             )
             # optionally store shipping country or address fields here
             db.session.add(new_order)
@@ -349,7 +356,8 @@ def summary():
                     total_cents=cart_summary['total_cents'],
                     shipping_method=selected_shipping,
                     payment_method=selected_payment,
-                    comment=comment
+                    comment=comment,
+                    promo_code=promo_code
                 )
                 db.session.add(new_order)
                 db.session.flush()
