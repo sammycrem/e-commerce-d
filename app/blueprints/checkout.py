@@ -242,11 +242,18 @@ def edit_address(address_id):
 @login_required
 def shipping_methods():
     cart_info = session.get('cart', {})
+    if not cart_info:
+        return redirect(url_for('cart_bp.cart_page'))
+
     items = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     # Get the user's shipping address
     shipping_address = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
-    country_iso = shipping_address.country_iso_code if shipping_address else None
+    if not shipping_address:
+        flash('Please add a shipping address before proceeding.', 'warning')
+        return redirect(url_for('checkout_bp.shipping_address'))
+
+    country_iso = shipping_address.country_iso_code
 
     selected_shipping = session.get('shipping_method', 'standard')
     promo_code = session.get('promo_code')
@@ -267,6 +274,10 @@ def shipping_methods_save():
 @checkout_bp.route('/checkout/payment-methods', methods=['GET', 'POST'])
 @login_required
 def payment_methods():
+    cart_info = session.get('cart', {})
+    if not cart_info:
+        return redirect(url_for('cart_bp.cart_page'))
+
     if request.method == 'POST':
         payment_method = request.form.get('payment_method')
         if payment_method:
@@ -274,12 +285,15 @@ def payment_methods():
             return redirect(url_for('checkout_bp.summary'))
         flash('Please select a payment method.', 'danger')
 
-    cart_info = session.get('cart', {})
     items = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     # Get the user's shipping address for calculation
     shipping_address = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
-    country_iso = shipping_address.country_iso_code if shipping_address else None
+    if not shipping_address:
+        flash('Please add a shipping address before proceeding.', 'warning')
+        return redirect(url_for('checkout_bp.shipping_address'))
+
+    country_iso = shipping_address.country_iso_code
 
     # We also need the shipping cost from the previous step
     # For now, we'll just recalculate based on standard or get from session if stored
@@ -297,12 +311,16 @@ def payment_methods():
 def summary():
     cart_info = session.get('cart', {})
     if not cart_info:
-        return redirect(url_for('shop_page'))
+        return redirect(url_for('cart_bp.cart_page'))
 
     items_list = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     shipping_address = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
-    country_iso = shipping_address.country_iso_code if shipping_address else None
+    if not shipping_address:
+        flash('Please add a shipping address before proceeding.', 'warning')
+        return redirect(url_for('checkout_bp.shipping_address'))
+
+    country_iso = shipping_address.country_iso_code
 
     selected_shipping = session.get('shipping_method', 'standard')
     selected_payment = session.get('payment_method', 'card')

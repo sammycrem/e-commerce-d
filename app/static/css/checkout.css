@@ -10,8 +10,8 @@ body {
 }
 
 .card:hover {
-    transform: translateY(-7px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
 .card-body {
@@ -109,6 +109,8 @@ body {
     text-align: center;
     width: 100%;
     position: relative;
+    text-decoration: none !important;
+    cursor: pointer;
 }
 
 .progress-step-number {

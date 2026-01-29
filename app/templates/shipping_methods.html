@@ -7,26 +7,26 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="progress-bar-container mb-4">
-                <div class="progress-step completed">
+                <a href="{{ url_for('cart_bp.cart_page') }}" class="progress-step completed">
                     <div class="progress-step-number">1</div>
                     <div class="progress-step-label">My Cart</div>
-                </div>
-                <div class="progress-step completed">
+                </a>
+                <a href="{{ url_for('checkout_bp.shipping_address') }}" class="progress-step completed">
                     <div class="progress-step-number">2</div>
                     <div class="progress-step-label">Shipping Address</div>
-                </div>
-                <div class="progress-step active">
+                </a>
+                <a href="{{ url_for('checkout_bp.shipping_methods') }}" class="progress-step active">
                     <div class="progress-step-number">3</div>
                     <div class="progress-step-label">Shipping Methods</div>
-                </div>
-                <div class="progress-step">
+                </a>
+                <a href="{{ url_for('checkout_bp.payment_methods') }}" class="progress-step">
                     <div class="progress-step-number">4</div>
                     <div class="progress-step-label">Payment Methods</div>
-                </div>
-                <div class="progress-step">
+                </a>
+                <a href="{{ url_for('checkout_bp.summary') }}" class="progress-step">
                     <div class="progress-step-number">5</div>
                     <div class="progress-step-label">Summary</div>
-                </div>
+                </a>
             </div>
             <h1 class="mb-4">Shipping Methods</h1>
         </div>

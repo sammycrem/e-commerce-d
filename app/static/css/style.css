@@ -80,6 +80,12 @@ a:hover {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    cursor: pointer;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 .btn-primary {
@@ -390,6 +396,8 @@ a:hover {
     align-items: center;
     position: relative;
     z-index: 1;
+    text-decoration: none !important;
+    cursor: pointer;
 }
 
 .progress-step-number {

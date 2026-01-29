@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (subtotalEl) subtotalEl.textContent = formatPrice(data.subtotal_cents || 0);
 
       // Cart page displays total without shipping and tax
-      const subtotalAfterDiscount = (data.subtotal_cents || 0);
+      const subtotalAfterDiscount = (data.subtotal_after_discount_cents || data.subtotal_cents || 0);
       if (totalEl) totalEl.textContent = formatPrice(subtotalAfterDiscount);
 
     } catch (err) {
