@@ -13,6 +13,7 @@ class User(db.Model, UserMixin):
     user_id = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
     encrypted_password = db.Column(db.String(128), nullable=False)
+    phone = db.Column(db.String(20), nullable=True)
     validation = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     orders = db.relationship('Order', back_populates='user')

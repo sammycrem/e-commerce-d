@@ -430,7 +430,27 @@ def home():
 @app.route('/profile')
 @login_required
 def profile():
-    return render_template('home.html')
+    countries = Country.query.all()
+    return render_template('home.html', countries=countries)
+
+@app.route('/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+
+    if email:
+        # Check if email is taken by another user
+        existing = User.query.filter(User.email == email.lower(), User.id != current_user.id).first()
+        if existing:
+            flash('Email is already in use.', 'danger')
+            return redirect(url_for('profile'))
+        current_user.email = email.lower()
+
+    current_user.phone = phone
+    db.session.commit()
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('profile'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1296,6 +1316,7 @@ def admin_get_order(public_order_id):
         "shipping_cost_cents": order.shipping_cost_cents,
         "vat_cents": order.vat_cents,
         "total_cents": order.total_cents,
+        "comment": order.comment,
         "shipping_method": order.shipping_method,
         "payment_method": order.payment_method,
         "promo_code": order.promo_code,
@@ -1341,8 +1362,7 @@ app.register_blueprint(countries_bp)
 # -------------------------
 # Start
 # -------------------------
-with app.app_context():
-    setup_database(app)
-
 if __name__ == "__main__":
+    with app.app_context():
+        setup_database(app)
     app.run(host="0.0.0.0", port=5000)

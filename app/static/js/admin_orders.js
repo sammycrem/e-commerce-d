@@ -200,6 +200,12 @@
     infoList.appendChild(el('li', {}, el('span', { class: 'text-muted' }, 'Shipping Method: '), o.shipping_method || 'N/A'));
     infoList.appendChild(el('li', {}, el('span', { class: 'text-muted' }, 'Payment Method: '), o.payment_method || 'N/A'));
     infoList.appendChild(el('li', {}, el('span', { class: 'text-muted' }, 'Promo Code: '), el('span', { class: 'badge bg-light text-dark' }, o.promo_code || 'None')));
+    if (o.comment) {
+      infoList.appendChild(el('li', { class: 'mt-2' },
+        el('div', { class: 'text-muted small fw-bold' }, 'Order Comment:'),
+        el('div', { class: 'p-2 bg-light rounded mt-1 border' }, o.comment)
+      ));
+    }
     methodCol.appendChild(infoList);
     grid.appendChild(methodCol);
 
