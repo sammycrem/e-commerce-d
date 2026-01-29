@@ -78,6 +78,8 @@ class Order(db.Model):
     shipping_provider = db.Column(db.Text, nullable=True)
     tracking_number = db.Column(db.Text, nullable=True)
     promo_code = db.Column(db.String(50), nullable=True)
+    shipping_address_snapshot = db.Column(db.JSON, nullable=True)
+    billing_address_snapshot = db.Column(db.JSON, nullable=True)
     shipped_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))

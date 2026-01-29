@@ -466,6 +466,33 @@ a:hover {
     background-color: var(--success-color);
 }
 
+/* Admin Dashboard Styles */
+.order-row:hover {
+    background-color: #f1f4f8;
+}
+
+.toast {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.summary-card {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.transition {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
 @media (max-width: 991.98px) {
     .product-page { flex-direction: column; }
     .gallery-column { flex-direction: column-reverse; }

@@ -150,31 +150,103 @@
     container.innerHTML = ''; // clear
 
     // header / basic summary
-    const header = el('div', { class: 'order-header' },
-      el('h2', {}, `Order ${o.public_order_id}`),
-      el('div', {}, `Created: ${new Date(o.created_at).toLocaleString()}`)
+    const header = el('div', { class: 'order-header mb-4' },
+      el('h2', { class: 'fw-bold' }, `Order ${o.public_order_id}`),
+      el('div', { class: 'text-muted' }, `Created: ${new Date(o.created_at).toLocaleString()}`),
+      el('div', { class: 'badge bg-primary mt-2' }, o.status)
     );
     container.appendChild(header);
 
+    // Grid for Addresses and Methods
+    const grid = el('div', { class: 'row mb-4' });
+
+    // Shipping Address
+    const shipCol = el('div', { class: 'col-md-6 mb-3' }, el('h4', { class: 'h6 fw-bold' }, 'Shipping Address'));
+    if (o.shipping_address_snapshot) {
+      const s = o.shipping_address_snapshot;
+      shipCol.appendChild(el('div', { class: 'small' },
+        el('div', { class: 'fw-bold' }, `${s.first_name} ${s.last_name}`),
+        el('div', {}, s.address_line_1),
+        s.address_line_2 ? el('div', {}, s.address_line_2) : '',
+        el('div', {}, `${s.city}, ${s.state || ''} ${s.postal_code}`),
+        el('div', {}, s.country_iso_code),
+        el('div', { class: 'text-muted' }, s.phone_number || '')
+      ));
+    } else {
+      shipCol.appendChild(el('div', { class: 'text-muted small' }, 'No shipping address recorded.'));
+    }
+    grid.appendChild(shipCol);
+
+    // Billing Address
+    const billCol = el('div', { class: 'col-md-6 mb-3' }, el('h4', { class: 'h6 fw-bold' }, 'Billing Address'));
+    if (o.billing_address_snapshot) {
+      const b = o.billing_address_snapshot;
+      billCol.appendChild(el('div', { class: 'small' },
+        el('div', { class: 'fw-bold' }, `${b.first_name} ${b.last_name}`),
+        el('div', {}, b.address_line_1),
+        b.address_line_2 ? el('div', {}, b.address_line_2) : '',
+        el('div', {}, `${b.city}, ${b.state || ''} ${b.postal_code}`),
+        el('div', {}, b.country_iso_code),
+        el('div', { class: 'text-muted' }, b.phone_number || '')
+      ));
+    } else {
+      billCol.appendChild(el('div', { class: 'text-muted small' }, 'No billing address recorded.'));
+    }
+    grid.appendChild(billCol);
+
+    // Methods
+    const methodCol = el('div', { class: 'col-md-12 mb-3' }, el('h4', { class: 'h6 fw-bold border-top pt-3' }, 'Methods & Info'));
+    const infoList = el('ul', { class: 'list-unstyled small' });
+    infoList.appendChild(el('li', {}, el('span', { class: 'text-muted' }, 'Shipping Method: '), o.shipping_method || 'N/A'));
+    infoList.appendChild(el('li', {}, el('span', { class: 'text-muted' }, 'Payment Method: '), o.payment_method || 'N/A'));
+    infoList.appendChild(el('li', {}, el('span', { class: 'text-muted' }, 'Promo Code: '), el('span', { class: 'badge bg-light text-dark' }, o.promo_code || 'None')));
+    methodCol.appendChild(infoList);
+    grid.appendChild(methodCol);
+
+    container.appendChild(grid);
+
     // items list
-    const itemsWrap = el('div', { class: 'order-items' });
-    itemsWrap.appendChild(el('h3', {}, 'Items'));
-    const ul = el('ul', {});
+    const itemsWrap = el('div', { class: 'order-items mb-4' });
+    itemsWrap.appendChild(el('h4', { class: 'h6 fw-bold border-bottom pb-2' }, 'Order Items'));
+    const table = el('table', { class: 'table table-sm small' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Item'),
+        el('th', {}, 'SKU'),
+        el('th', { class: 'text-center' }, 'Qty'),
+        el('th', { class: 'text-end' }, 'Unit Price'),
+        el('th', { class: 'text-end' }, 'Total')
+      )),
+      el('tbody', {})
+    );
+    const tbody = table.querySelector('tbody');
     (o.items || []).forEach(it => {
       const name = (it.product_snapshot && it.product_snapshot.name) ? it.product_snapshot.name : it.variant_sku;
-      ul.appendChild(el('li', {}, `${name} — SKU ${it.variant_sku} — Qty ${it.quantity} — Unit ${formatPrice(it.unit_price_cents)}`));
+      tbody.appendChild(el('tr', {},
+        el('td', {}, name),
+        el('td', {}, it.variant_sku),
+        el('td', { class: 'text-center' }, it.quantity.toString()),
+        el('td', { class: 'text-end' }, formatPrice(it.unit_price_cents)),
+        el('td', { class: 'text-end' }, formatPrice(it.unit_price_cents * it.quantity))
+      ));
     });
-    itemsWrap.appendChild(ul);
+    itemsWrap.appendChild(table);
     container.appendChild(itemsWrap);
 
     // amounts
-    const amounts = el('div', { class: 'order-amounts' },
-      el('p', {}, `Subtotal: ${formatPrice(o.subtotal_cents)}`),
-      el('p', {}, `Discount: ${formatPrice(o.discount_cents)}`),
-      el('p', {}, `VAT: ${formatPrice(o.vat_cents)}`),
-      el('p', {}, `Shipping: ${formatPrice(o.shipping_cost_cents)}`),
-      el('h3', {}, `Total: ${formatPrice(o.total_cents)}`)
-    );
+    const amounts = el('div', { class: 'order-amounts bg-light p-3 rounded' });
+    const addRow = (label, value, isBold = false) => {
+      const row = el('div', { class: `d-flex justify-content-between mb-1 ${isBold ? 'fw-bold h5 mt-2 pt-2 border-top' : ''}` },
+        el('span', {}, label),
+        el('span', {}, value)
+      );
+      amounts.appendChild(row);
+    };
+    addRow('Subtotal', formatPrice(o.subtotal_cents));
+    if (o.discount_cents > 0) addRow('Discount', `-${formatPrice(o.discount_cents)}`);
+    addRow('Shipping', formatPrice(o.shipping_cost_cents));
+    addRow('VAT', formatPrice(o.vat_cents));
+    addRow('Total Due', formatPrice(o.total_cents), true);
+
     container.appendChild(amounts);
 
     // workflow controls
