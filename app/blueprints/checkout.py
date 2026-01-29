@@ -26,6 +26,7 @@ def apply_promo():
         return jsonify({"error": "Invalid promotion code"}), 404
 
     promo_valid_to = promo.valid_to
+    # Ensure timezone-aware comparison to avoid TypeError regarding aware vs naive datetimes
     if promo_valid_to and promo_valid_to.tzinfo is None:
         promo_valid_to = promo_valid_to.replace(tzinfo=timezone.utc)
 
@@ -37,11 +38,17 @@ def apply_promo():
 
     discount_cents = 0
     if promo.discount_type == 'PERCENT':
-        discount_cents = int(ceil(cart_subtotal * (promo.discount_value / 100)))
+        from ..utils import cents_to_decimal, decimal_to_cents
+        from decimal import Decimal
+        pct = Decimal(promo.discount_value) / Decimal(100)
+        discount_decimal = cents_to_decimal(cart_subtotal) * pct
+        discount_cents = decimal_to_cents(discount_decimal)
     elif promo.discount_type == 'FIXED':
         discount_cents = int(promo.discount_value)
 
+    # Store promo code in session for persistence across checkout steps
     session['promo_code'] = promo.code
+    session.modified = True
     return jsonify({"code": promo.code, "discount_cents": discount_cents, "new_total_cents": cart_subtotal - discount_cents}), 200
 
 @checkout_bp.route('/api/checkout', methods=['POST'])

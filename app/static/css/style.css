@@ -77,16 +77,23 @@ a:hover {
     border-radius: 0.5rem;
     font-weight: 600;
     padding: 0.6rem 1.25rem;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 }
 
 .btn-primary {
-    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(13, 110, 253, 0.25);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
+    filter: brightness(1.1);
+}
+
+.btn-primary:active {
+    transform: translateY(-1px);
 }
 
 .form-control, .form-select, .form-input {
@@ -386,32 +393,36 @@ a:hover {
 }
 
 .progress-step-number {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     background-color: #fff;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dee2e6;
     color: #adb5bd;
     font-weight: 700;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 0.75rem;
-    transition: all 0.3s ease;
-    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1rem;
+    position: relative;
+    z-index: 2;
 }
 
 .progress-step.active .progress-step-number {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
     color: #fff;
-    box-shadow: 0 0 0 6px rgba(13, 110, 253, 0.15);
+    box-shadow: 0 0 0 5px rgba(13, 110, 253, 0.25);
+    transform: scale(1.1);
 }
 
 .progress-step.completed .progress-step-number {
     background-color: var(--success-color);
     border-color: var(--success-color);
     color: #fff;
+    transform: scale(1);
 }
 
 .progress-step-label {
@@ -434,13 +445,13 @@ a:hover {
 .progress-step:not(:last-child)::after {
     content: '';
     position: absolute;
-    top: 20px;
+    top: 17px;
     left: 50%;
     width: 100%;
-    height: 4px;
-    background-color: #e9ecef;
-    z-index: -1;
-    transition: background-color 0.3s ease;
+    height: 3px;
+    background-color: #dee2e6;
+    z-index: 1;
+    transition: all 0.4s ease;
 }
 
 .progress-step.completed::after {

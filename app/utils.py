@@ -798,6 +798,7 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
         from datetime import datetime, timezone
         if promo:
             promo_valid_to = promo.valid_to
+            # Ensure timezone-aware comparison to avoid TypeError regarding aware vs naive datetimes
             if promo_valid_to and promo_valid_to.tzinfo is None:
                 promo_valid_to = promo_valid_to.replace(tzinfo=timezone.utc)
 
@@ -808,11 +809,11 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
 
     if promo:
         if promo.discount_type == 'PERCENT':
-            # promo.discount_value expected as percentage (e.g., 20 for 20)
+            # promo.discount_value expected as percentage (e.g., 20 for 20%)
             try:
-                from math import ceil
-                pct = float(promo.discount_value)
-                discount_cents = int(ceil(subtotal * (pct / 100.0)))
+                pct = Decimal(promo.discount_value) / Decimal(100)
+                discount_decimal = cents_to_decimal(subtotal) * pct
+                discount_cents = decimal_to_cents(discount_decimal)
             except Exception:
                 discount_cents = 0
         elif promo.discount_type == 'FIXED':
@@ -910,11 +911,21 @@ def compute_vat_for_cart(cart_items: list, country_iso: str):
         unit_cents = int(it.get('unit_price_cents', 0))
         category = it.get('product_snapshot', {}).get('category') if it.get('product_snapshot') else None
         vat_rate = get_vat_rate_for_product(country_iso, category)
-        vat_per_unit_decimal = cents_to_decimal(unit_cents) * Decimal(vat_rate)
-        vat_per_unit_cents = decimal_to_cents(vat_per_unit_decimal)
-        line_vat = vat_per_unit_cents * qty
-        item_vats.append({'sku': it.get('sku') or it.get('variant_sku'), 'unit_vat_cents': vat_per_unit_cents, 'line_vat_cents': line_vat})
-        total_vat += line_vat
+
+        # Refined VAT calculation: convert to decimal Euros before calculation and back to cents.
+        # We calculate on the line total to be more precise and prevent double-multiplication errors.
+        line_total_decimal = cents_to_decimal(unit_cents * qty)
+        line_vat_decimal = line_total_decimal * Decimal(vat_rate)
+        line_vat_cents = decimal_to_cents(line_vat_decimal)
+
+        vat_per_unit_cents = decimal_to_cents(cents_to_decimal(unit_cents) * Decimal(vat_rate))
+
+        item_vats.append({
+            'sku': it.get('sku') or it.get('variant_sku'),
+            'unit_vat_cents': vat_per_unit_cents,
+            'line_vat_cents': line_vat_cents
+        })
+        total_vat += line_vat_cents
     return item_vats, total_vat
 
 def find_shipping_zone_for_country(country_iso: str):

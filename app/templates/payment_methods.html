@@ -88,23 +88,26 @@
                     </div>
 
                     <div class="mt-4">
-                        <h5 class="mb-3 fw-bold">Use my loyalty credit</h5>
+                        <h5 class="mb-3 fw-bold">Promo Code</h5>
                         <div class="input-group mb-3" style="max-width: 400px;">
-                            <input type="text" class="form-control" placeholder="Enter your coupon code if you have">
-                            <button class="btn btn-primary" type="button"><i class="bi bi-arrow-right"></i></button>
+                            <input type="text" id="promo-code" class="form-control" placeholder="Enter promo code" value="{{ session.get('promo_code', '') }}">
+                            <button id="apply-promo-btn" class="btn btn-primary" type="button">Apply</button>
                         </div>
+                        <p id="promo-feedback" class="small mt-1 mb-0"></p>
                     </div>
                 </form>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card shadow-sm border-0 summary-card sticky-top" style="top: 2rem; z-index: 10;">
+            <div class="card shadow-sm border-0 summary-card sticky-top" style="top: 2rem; z-index: 10;"
+                 data-country-iso="{{ country_iso }}"
+                 data-shipping-method="{{ selected_shipping }}">
                 <div class="card-body">
                     <h2 class="h4 mb-4">Summary</h2>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Subtotal</span>
-                        <span id="summary-subtotal" class="fw-bold">€{{ "%.2f"|format(cart_summary.subtotal_cents / 100) }}</span>
+                        <span id="summary-subtotal" class="fw-bold" data-subtotal-cents="{{ cart_summary.subtotal_cents }}">€{{ "%.2f"|format(cart_summary.subtotal_cents / 100) }}</span>
                     </div>
                     <div id="summary-discount-row" class="d-flex justify-content-between mb-2 text-danger" {% if cart_summary.discount_cents == 0 %}style="display: none !important;"{% endif %}>
                         <span class="">Discount</span>
@@ -137,6 +140,7 @@
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', filename='js/payment_methods.js') }}"></script>
 <style>
     .payment-card {
         transition: all 0.2s;
