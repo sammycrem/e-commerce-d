@@ -48,6 +48,25 @@ def create_product_data(product_key):
     name = f"T-Shirt {product_key.upper()}"
     category = "Graphic Tees"
     description = f"Comfortable cotton tee — design {product_key.upper()}."
+    short_description = f"Standard fit {product_key.upper()} tee."
+    details = f"• 100% Organic Cotton\n• Pre-shrunk fabric\n• Side-seamed construction"
+
+    import json
+    related = []
+    proposed = []
+    if product_key == 'p-1':
+        related = ['p-2', 'p-3']
+        proposed = ['p-4']
+    elif product_key == 'p-2':
+        related = ['p-3', 'p-4']
+        proposed = ['p-1']
+    elif product_key == 'p-3':
+        related = ['p-4', 'p-1']
+        proposed = ['p-2']
+    elif product_key == 'p-4':
+        related = ['p-1', 'p-2']
+        proposed = ['p-3']
+
     base_price_usd = BASE_PRICES_USD.get(product_key, 19.99)
     base_price_cents = usd_to_cents(base_price_usd)
     product_image_url = f"{BASE_URL}/{product_key}/a-1.webp"
@@ -92,6 +111,13 @@ def create_product_data(product_key):
         "name": name,
         "category": category,
         "description": description,
+        "short_description": short_description,
+        "details": details,
+        "related_products_json": json.dumps(related),
+        "proposed_products_json": json.dumps(proposed),
+        "tag1": "New Arrival",
+        "tag2": "Eco-Friendly",
+        "tag3": "Best Seller",
         "base_price_cents": base_price_cents,
         "image_url": product_image_url,
         "images": product_images,
@@ -112,6 +138,13 @@ def insert_product(session, pdata):
         product_sku=sku,
         name=pdata["name"],
         description=pdata.get("description"),
+        short_description=pdata.get("short_description"),
+        details=pdata.get("details"),
+        related_products_json=pdata.get("related_products_json"),
+        proposed_products_json=pdata.get("proposed_products_json"),
+        tag1=pdata.get("tag1"),
+        tag2=pdata.get("tag2"),
+        tag3=pdata.get("tag3"),
         category=pdata.get("category"),
         base_price_cents=int(pdata["base_price_cents"])
     )

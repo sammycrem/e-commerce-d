@@ -1,267 +1,211 @@
-// static/js/product.js
-// New gallery: vertical thumb rail, swatch thumbnails, size buttons, dynamic price update.
-// Outline for selected thumb/swatch: rgb(17, 24, 39) solid 3px
+document.addEventListener('DOMContentLoaded', () => {
+    const productPage = document.getElementById('product-page');
+    if (!productPage) return;
 
-(() => {
-  const SKU = window.PRODUCT_SKU;
-  if (!SKU) return;
+    const sku = productPage.dataset.sku;
+    let currentProduct = null;
+    let currentImages = [];
+    let currentImageIndex = 0;
+    let selectedColor = null;
+    let selectedSize = null;
 
-  // helpers
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const formatPrice = cents => `$${(cents/100).toFixed(2)}`;
+    const mainImg = document.getElementById('main-product-image');
+    const thumbnailRail = document.getElementById('thumbnail-rail');
+    const imageCounter = document.getElementById('image-counter');
+    const productName = document.getElementById('product-name');
+    const productPrice = document.getElementById('product-price');
+    const productDesc = document.getElementById('product-description');
+    const productShortDesc = document.getElementById('product-short-description');
+    const productDetails = document.getElementById('product-details');
+    const breadcrumbCat = document.getElementById('breadcrumb-category');
+    const tagContainer = document.getElementById('tag-container');
 
-  // DOM
-  const thumbRail = $('#thumb-rail');
-  const mainImage = $('#main-image');
-  const productName = $('#product-name');
-  const productPrice = $('#product-price');
-  const productDescription = $('#product-description');
-  const swatchGrid = $('#swatch-grid');
-  const sizeButtons = $('#size-buttons');
-  const qtyInput = $('#qty-input');
-  const addToCartBtn = $('#add-to-cart');
-  const variantMessage = $('#variant-message');
-
-  // state
-  let product = null;
-  let selectedVariant = null;
-  let selectedColor = null;
-  let selectedSize = null;
-  let currentGallery = []; // array of {url, alt_text, display_order}
-
-  // set focused outline style class
-  const SELECTED_OUTLINE_STYLE = 'selected-outline';
-
-  // create thumb DOM element
-  function createThumb(imgObj, index) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'thumb-item';
-    wrapper.tabIndex = 0;
-    const img = document.createElement('img');
-    img.src = imgObj.url;
-    img.alt = imgObj.alt_text || product.name || 'product';
-    img.loading = 'lazy';
-    wrapper.appendChild(img);
-
-    wrapper.addEventListener('click', () => {
-      setActiveImage(index);
-    });
-    wrapper.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveImage(index); }
-    });
-
-    return wrapper;
-  }
-
-  function setActiveImage(index) {
-    const g = currentGallery;
-    const img = g[index] || g[0];
-    if (!img) return;
-    mainImage.src = img.url;
-    mainImage.alt = img.alt_text || product.name || '';
-    // mark selected thumb
-    $$('.thumb-item', thumbRail).forEach((t, i) => {
-      if (i === index) t.classList.add(SELECTED_OUTLINE_STYLE); else t.classList.remove(SELECTED_OUTLINE_STYLE);
-    });
-  }
-
-  // Render vertical thumb rail from images array
-  function renderThumbRail(images) {
-    thumbRail.innerHTML = '';
-    if (!images || images.length === 0) {
-      thumbRail.style.display = 'none';
-      return;
-    }
-    thumbRail.style.display = '';
-    images.forEach((img, idx) => {
-      const t = createThumb(img, idx);
-      thumbRail.appendChild(t);
-    });
-    setActiveImage(0);
-  }
-
-  function renderSwatches(variants) {
-    swatchGrid.innerHTML = '';
-    // Group variants by color_name; first variant of color used for swatch image
-    const colorMap = new Map();
-    (variants || []).forEach(v => {
-      const color = (v.color_name || 'Default').trim();
-      if (!colorMap.has(color)) colorMap.set(color, []);
-      colorMap.get(color).push(v);
-    });
-
-    // create swatch node for each color
-    let idx = 0;
-    for (const [color, arr] of colorMap.entries()) {
-      // pick variant that has images or first in array
-      const firstVariant = arr.find(x => x.images && x.images.length) || arr[0];
-      const swatchImg = firstVariant && firstVariant.images && firstVariant.images[0] ? firstVariant.images[0].url : (product.images && product.images[0] && product.images[0].url) || '';
-      const swatch = document.createElement('button');
-      swatch.className = 'swatch';
-      swatch.type = 'button';
-      swatch.dataset.color = color;
-      swatch.title = color;
-      swatch.innerHTML = `<img src="${swatchImg}" alt="${color}" loading="lazy"><div class="swatch-label">${color}</div>`;
-      swatch.addEventListener('click', () => {
-        selectColor(color);
-      });
-      swatchGrid.appendChild(swatch);
-      idx++;
-    }
-    // If only one color, optionally hide label - that's up to styling.
-  }
-
-  function renderSizes(variants_for_color) {
-    sizeButtons.innerHTML = '';
-    const sizes = []; // unique
-    (variants_for_color || []).forEach(v => {
-      const s = v.size || 'One Size';
-      if (!sizes.includes(s)) sizes.push(s);
-    });
-
-    sizes.forEach(sz => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'size-btn';
-      btn.textContent = sz;
-      btn.dataset.size = sz;
-      btn.addEventListener('click', () => {
-        selectSize(sz);
-      });
-      sizeButtons.appendChild(btn);
-    });
-  }
-
-  function selectColor(color) {
-    selectedColor = color;
-    // mark active swatch
-    $$('.swatch', swatchGrid).forEach(s => s.classList.toggle(SELECTED_OUTLINE_STYLE, s.dataset.color === color));
-    // pick available variants with this color
-    const variants_for_color = product.variants.filter(v => (v.color_name || '').trim() === color);
-    renderSizes(variants_for_color);
-    // auto-select first available size
-    const firstAvailable = variants_for_color.find(v => v.stock_quantity > 0) || variants_for_color[0];
-    selectedSize = firstAvailable ? firstAvailable.size : null;
-    // highlight size button
-    $$('.size-btn', sizeButtons).forEach(b => b.classList.toggle('active', b.dataset.size === selectedSize));
-    // choose a variant
-    updateSelectedVariantBy(color, selectedSize);
-  }
-
-  function selectSize(size) {
-    selectedSize = size;
-    $$('.size-btn', sizeButtons).forEach(b => b.classList.toggle('active', b.dataset.size === size));
-    updateSelectedVariantBy(selectedColor, selectedSize);
-  }
-
-  function updateSelectedVariantBy(color, size) {
-    const variant = product.variants.find(v =>
-      ((v.color_name || '').trim() === (color || '').trim()) &&
-      ((v.size || '').trim() === (size || '').trim())
-    );
-    if (!variant) {
-      variantMessage.textContent = 'This combination is not available.';
-      selectedVariant = null;
-      productPrice.textContent = formatPrice(product.base_price_cents || 0);
-      // use product images
-      currentGallery = (product.images || []).slice();
-      renderThumbRail(currentGallery);
-      return;
-    }
-    selectedVariant = variant;
-    variantMessage.textContent = variant.stock_quantity > 0 ? '' : 'Out of stock';
-
-    // compute final price
-    const finalPrice = (product.base_price_cents || 0) + (variant.price_modifier_cents || 0);
-    productPrice.textContent = formatPrice(finalPrice);
-
-    // update gallery: prefer variant.images then product.images
-    currentGallery = (variant.images && variant.images.length) ? variant.images.slice() : (product.images || []).slice();
-    renderThumbRail(currentGallery);
-    // select first variant image
-    setActiveImage(0);
-  }
-
-  async function addToCart() {
-    if (!selectedVariant) return alert('Please select a variant (color + size).');
-    const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
-    const payload = { sku: selectedVariant.sku, quantity: qty };
-    try {
-      const res = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        credentials: 'same-origin'
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'Failed to add to cart');
-      } else {
-        // success: maybe show a mini-toast or redirect to cart
-        addToCartBtn.textContent = 'Added ✓';
-        setTimeout(()=> addToCartBtn.textContent = 'Add to cart', 1500);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network error when adding to cart');
-    }
-  }
-
-  // fetch product and init
-  async function init() {
-    try {
-      const res = await fetch(`/api/products/${encodeURIComponent(SKU)}`, { credentials: 'same-origin' });
-      if (!res.ok) throw new Error('Product not found');
-      product = await res.json();
-
-      productName.textContent = product.name;
-      productDescription.textContent = product.description || '';
-      productPrice.textContent = formatPrice(product.base_price_cents || 0);
-
-      // ensure images arrays exist
-      product.images = product.images || [];
-      (product.variants || []).forEach(v => v.images = v.images || []);
-
-      // initial gallery: product images
-      currentGallery = (product.images && product.images.length) ? product.images.slice() : [];
-      renderThumbRail(currentGallery);
-
-      // render swatches and sizes
-      renderSwatches(product.variants || []);
-
-      // auto-select first color & size if available
-      const firstVariant = (product.variants && product.variants.length) ? product.variants[0] : null;
-      if (firstVariant) {
-        selectColor(firstVariant.color_name || '');
-        selectSize(firstVariant.size || '');
-      }
-
-      addToCartBtn.addEventListener('click', addToCart);
-
-      // keyboard accessibility: left/right arrows cycle thumbs
-      document.addEventListener('keydown', (e) => {
-        if (!currentGallery || currentGallery.length < 1) return;
-        const thumbs = $$('.thumb-item', thumbRail);
-        const activeIndex = thumbs.findIndex(t => t.classList.contains(SELECTED_OUTLINE_STYLE));
-        if (e.key === 'ArrowLeft') {
-          const idx = Math.max(0, (activeIndex > 0 ? activeIndex - 1 : 0));
-          setActiveImage(idx);
-        } else if (e.key === 'ArrowRight') {
-          const idx = Math.min(currentGallery.length - 1, (activeIndex < 0 ? 0 : activeIndex + 1));
-          setActiveImage(idx);
+    const fetchProduct = async (productSku) => {
+        try {
+            const res = await fetch(`/api/products/${productSku}`);
+            if (!res.ok) throw new Error('Product not found');
+            const data = await res.json();
+            currentProduct = data;
+            renderProduct();
+            renderCarousels();
+        } catch (err) {
+            console.error(err);
+            productName.textContent = 'Error loading product';
         }
-      });
+    };
 
-    } catch (err) {
-      console.error(err);
-      productName.textContent = 'Product not found';
-      productDescription.textContent = '';
-    }
-  }
+    const renderProduct = () => {
+        productName.textContent = currentProduct.name;
+        productPrice.textContent = `$${(currentProduct.base_price_cents / 100).toFixed(2)}`;
+        productDesc.innerHTML = currentProduct.description || 'No description available.';
+        productShortDesc.textContent = currentProduct.short_description || '';
+        productDetails.innerHTML = currentProduct.details ? currentProduct.details.replace(/\n/g, '<br>') : 'No details available.';
+        breadcrumbCat.textContent = currentProduct.category || 'Products';
 
-  // CSS class names injection for selected outline (if not in stylesheet)
-  
+        // Render Tags
+        tagContainer.innerHTML = '';
+        ['tag1', 'tag2', 'tag3'].forEach(t => {
+            if (currentProduct[t]) {
+                const span = document.createElement('span');
+                span.className = 'badge rounded-pill bg-light text-dark border';
+                span.textContent = currentProduct[t];
+                tagContainer.appendChild(span);
+            }
+        });
 
-  init();
-})();
+        renderVariants();
+        updateGallery();
+    };
+
+    const renderVariants = () => {
+        const colors = [...new Set(currentProduct.variants.map(v => v.color_name))];
+        const colorOpts = document.getElementById('color-options');
+        colorOpts.innerHTML = '';
+        colors.forEach(color => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline-secondary btn-sm';
+            btn.textContent = color;
+            btn.dataset.color = color;
+            btn.onclick = () => selectColor(color);
+            colorOpts.appendChild(btn);
+        });
+
+        if (colors.length > 0) selectColor(colors[0]);
+    };
+
+    const selectColor = (color) => {
+        selectedColor = color;
+        document.querySelectorAll('#color-options .btn').forEach(b => {
+            b.classList.toggle('active', b.textContent === color);
+            b.classList.toggle('btn-primary', b.textContent === color);
+            b.classList.toggle('btn-outline-secondary', b.textContent !== color);
+        });
+
+        // Filter sizes for this color
+        const availableSizes = currentProduct.variants
+            .filter(v => v.color_name === color)
+            .map(v => v.size);
+
+        const sizeOpts = document.getElementById('size-options');
+        sizeOpts.innerHTML = '';
+        availableSizes.forEach(size => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline-secondary btn-sm';
+            btn.textContent = size;
+            btn.dataset.size = size;
+            btn.onclick = () => selectSize(size);
+            sizeOpts.appendChild(btn);
+        });
+
+        if (availableSizes.length > 0) selectSize(availableSizes[0]);
+
+        // Update gallery based on color variant
+        const firstVariant = currentProduct.variants.find(v => v.color_name === color);
+        if (firstVariant && firstVariant.images && firstVariant.images.length > 0) {
+            currentImages = firstVariant.images;
+        } else {
+            currentImages = currentProduct.images;
+        }
+        currentImageIndex = 0;
+        updateGallery();
+    };
+
+    const selectSize = (size) => {
+        selectedSize = size;
+        document.querySelectorAll('#size-options .btn').forEach(b => {
+            b.classList.toggle('active', b.textContent === size);
+            b.classList.toggle('btn-primary', b.textContent === size);
+            b.classList.toggle('btn-outline-secondary', b.textContent !== size);
+        });
+
+        const variant = currentProduct.variants.find(v => v.color_name === selectedColor && v.size === size);
+        if (variant) {
+            productPrice.textContent = `$${(variant.final_price_cents / 100).toFixed(2)}`;
+        }
+    };
+
+    const updateGallery = () => {
+        if (currentImages.length === 0) return;
+
+        mainImg.src = currentImages[currentImageIndex].url;
+        imageCounter.textContent = `${currentImageIndex + 1} / ${currentImages.length}`;
+
+        thumbnailRail.innerHTML = '';
+        currentImages.forEach((img, idx) => {
+            const thumb = document.createElement('img');
+            thumb.src = img.url;
+            thumb.className = `img-thumbnail cursor-pointer ${idx === currentImageIndex ? 'border-primary border-2' : ''}`;
+            thumb.style.width = '100%';
+            thumb.style.height = '80px';
+            thumb.style.objectFit = 'cover';
+            thumb.onclick = () => {
+                currentImageIndex = idx;
+                updateGallery();
+            };
+            thumbnailRail.appendChild(thumb);
+        });
+    };
+
+    document.getElementById('prev-image').onclick = () => {
+        currentImageIndex = (currentImageIndex - 1 + currentImages.length) % currentImages.length;
+        updateGallery();
+    };
+
+    document.getElementById('next-image').onclick = () => {
+        currentImageIndex = (currentImageIndex + 1) % currentImages.length;
+        updateGallery();
+    };
+
+    const renderCarousels = async () => {
+        const relatedBox = document.getElementById('related-products-carousel');
+        const proposedBox = document.getElementById('proposed-products-carousel');
+
+        const fetchList = async (skus, container) => {
+            container.innerHTML = '';
+            if (!skus || skus.length === 0) {
+                container.innerHTML = '<p class="text-muted">No products found.</p>';
+                return;
+            }
+            for (const s of skus) {
+                try {
+                    const r = await fetch(`/api/products/${s}`);
+                    if (!r.ok) continue;
+                    const p = await r.json();
+                    const card = `
+                        <div class="card border-0 shadow-sm flex-shrink-0" style="width: 220px;">
+                            <a href="/product/${p.product_sku}" class="text-decoration-none">
+                                <img src="${p.images[0]?.url}" class="card-img-top rounded" alt="${p.name}" style="height: 220px; object-fit: cover;">
+                                <div class="card-body px-0">
+                                    <h6 class="card-title text-dark mb-1 text-truncate">${p.name}</h6>
+                                    <p class="text-primary fw-bold mb-0">$${(p.base_price_cents / 100).toFixed(2)}</p>
+                                </div>
+                            </a>
+                        </div>
+                    `;
+                    container.innerHTML += card;
+                } catch (e) {}
+            }
+        };
+
+        fetchList(currentProduct.related_products, relatedBox);
+        fetchList(currentProduct.proposed_products, proposedBox);
+    };
+
+    document.getElementById('add-to-cart-btn').onclick = async () => {
+        const variant = currentProduct.variants.find(v => v.color_name === selectedColor && v.size === selectedSize);
+        if (!variant) return alert('Please select a variant');
+
+        const res = await fetch('/api/cart/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ variant_sku: variant.sku, quantity: 1 })
+        });
+        if (res.ok) {
+            window.location.href = '/cart';
+        } else {
+            alert('Failed to add to cart');
+        }
+    };
+
+    fetchProduct(sku);
+});

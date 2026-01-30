@@ -89,6 +89,46 @@ a:hover {
     box-shadow: 0 6px 15px rgba(13, 110, 253, 0.25);
 }
 
+/* Product Detail Enhancements */
+#thumbnail-rail::-webkit-scrollbar {
+    display: none;
+}
+
+.gallery-nav:hover {
+    background: rgba(255,255,255,0.9) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+#related-products-carousel::-webkit-scrollbar,
+#proposed-products-carousel::-webkit-scrollbar {
+    height: 6px;
+}
+
+#related-products-carousel::-webkit-scrollbar-thumb,
+#proposed-products-carousel::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 10px;
+}
+
+#related-products-carousel::-webkit-scrollbar-track,
+#proposed-products-carousel::-webkit-scrollbar-track {
+    background: #f8f9fa;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #f8f9fa;
+    color: #0d6efd;
+}
+
+.badge.rounded-pill {
+    padding: 0.5em 1em;
+    font-weight: 500;
+}
+
 .form-control, .form-select, .form-input {
     border-radius: 0.5rem;
     border: 1px solid #dee2e6;
