@@ -96,6 +96,26 @@
       const addImg = el('button', { class: 'btn', type: 'button' }, 'Add Variant Image');
       addImg.addEventListener('click', () => addVariantImageRow());
 
+      const duplicateBtn = el('button', { class: 'btn btn-outline-primary', type: 'button', style: 'margin-right: 8px;' }, 'Duplicate');
+      duplicateBtn.addEventListener('click', () => {
+        const currentPrefill = {
+          sku: sku.value + '-duplicate',
+          color_name: color.value,
+          size: size.value,
+          stock_quantity: parseInt(stock.value || '0'),
+          price_modifier_cents: parsePriceToCents(priceMod.value),
+          images: []
+        };
+        $all('[data-role="variant-image"]', wrapper).forEach(imgRow => {
+          currentPrefill.images.push({
+            url: imgRow.querySelector('.img-url').value,
+            alt_text: imgRow.querySelector('.img-alt').value,
+            display_order: parseInt(imgRow.querySelector('.img-order').value || '0')
+          });
+        });
+        addVariantRow(currentPrefill);
+      });
+
       const removeBtn = el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove Variant');
       removeBtn.addEventListener('click', () => wrapper.remove());
 
@@ -107,6 +127,7 @@
       wrapper.appendChild(el('label', {}, 'Price modifier in USD')); wrapper.appendChild(priceMod);
       wrapper.appendChild(vImgs);
       wrapper.appendChild(addImg);
+      wrapper.appendChild(duplicateBtn);
       wrapper.appendChild(removeBtn);
 
       variantsContainer.appendChild(wrapper);

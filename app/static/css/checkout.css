@@ -4,13 +4,14 @@ body {
 
 .card {
     border: none;
-    border-radius: 0.5rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    transition: transform 0.2s;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
 .card-body {
@@ -70,9 +71,14 @@ body {
 
 .address-card {
     margin-bottom: 1.5rem;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    border-radius: 8px;
+    border: 1px solid #f1f3f5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border-radius: 1rem;
+}
+
+.address-card:hover {
+    border-color: #dee2e6;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
 .address-card .card-body {
@@ -103,53 +109,69 @@ body {
     text-align: center;
     width: 100%;
     position: relative;
+    text-decoration: none !important;
+    cursor: pointer;
 }
 
 .progress-step-number {
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
-    background-color: #e0e0e0;
-    color: #fff;
-    font-weight: bold;
+    background-color: #fff;
+    border: 2px solid #dee2e6;
+    color: #adb5bd;
+    font-weight: 700;
     display: flex;
     justify-content: center;
     align-items: center;
     margin-bottom: 0.5rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1rem;
+    position: relative;
     z-index: 2;
 }
 
 .progress-step-label {
-    font-size: 0.9rem;
-    color: #666;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #adb5bd;
+    transition: all 0.3s ease;
 }
 
 .progress-step.active .progress-step-number {
-    background-color: #007bff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(13, 110, 253, 0.25);
+    transform: scale(1.1);
 }
 
 .progress-step.active .progress-step-label {
-    font-weight: bold;
-    color: #007bff;
+    color: #0d6efd;
 }
 
 .progress-step:not(:last-child)::after {
     content: '';
     position: absolute;
-    top: 15px;
+    top: 17px;
     left: 50%;
     width: 100%;
-    height: 2px;
-    background-color: #e0e0e0;
+    height: 3px;
+    background-color: #dee2e6;
     z-index: 1;
+    transition: all 0.4s ease;
 }
 
 .progress-step.completed .progress-step-number {
-    background-color: #007bff;
+    background-color: #198754;
+    border-color: #198754;
+    color: #fff;
 }
 
 .progress-step.completed::after {
-    background-color: #007bff;
+    background-color: #198754;
 }
 
 .form-check {

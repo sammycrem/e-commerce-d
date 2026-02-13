@@ -6,7 +6,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # Set dummy env vars before any app code is imported to prevent initialization errors
 os.environ['OPENAI_API_KEY'] = 'dummy-key-for-testing'
-os.environ['ENCRYPTION_KEY'] = 'IaSmdjLwEg89FtIr6skf0jN2CJKMUnUuyIOa-8VGzhU='
+# Use the correct encryption key from environment or default to the one that matches encrypt_config_file.txt
+if 'ENCRYPTION_KEY' not in os.environ:
+    os.environ['ENCRYPTION_KEY'] = 'VMzJvnz8S36yhK0CTx08v63hx4Py_yTTs85xHE6usFo='
 
 from app.app import app as flask_app
 from app.app import setup_database

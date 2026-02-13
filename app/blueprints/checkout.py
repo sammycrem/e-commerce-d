@@ -26,6 +26,7 @@ def apply_promo():
         return jsonify({"error": "Invalid promotion code"}), 404
 
     promo_valid_to = promo.valid_to
+    # Ensure timezone-aware comparison to avoid TypeError regarding aware vs naive datetimes
     if promo_valid_to and promo_valid_to.tzinfo is None:
         promo_valid_to = promo_valid_to.replace(tzinfo=timezone.utc)
 
@@ -35,13 +36,24 @@ def apply_promo():
     if promo.user_id is not None and promo.user_id != user_id:
         return jsonify({"error": "This promotion code is not valid for your account"}), 403
 
+    if user_id:
+        existing_usage = Order.query.filter_by(user_id=user_id, promo_code=code).first()
+        if existing_usage:
+            return jsonify({"error": "You have already used this promotion code"}), 403
+
     discount_cents = 0
     if promo.discount_type == 'PERCENT':
-        discount_cents = int(ceil(cart_subtotal * (promo.discount_value / 100)))
+        from ..utils import cents_to_decimal, decimal_to_cents
+        from decimal import Decimal
+        pct = Decimal(promo.discount_value) / Decimal(100)
+        discount_decimal = cents_to_decimal(cart_subtotal) * pct
+        discount_cents = decimal_to_cents(discount_decimal)
     elif promo.discount_type == 'FIXED':
         discount_cents = int(promo.discount_value)
 
+    # Store promo code in session for persistence across checkout steps
     session['promo_code'] = promo.code
+    session.modified = True
     return jsonify({"code": promo.code, "discount_cents": discount_cents, "new_total_cents": cart_subtotal - discount_cents}), 200
 
 @checkout_bp.route('/api/checkout', methods=['POST'])
@@ -59,7 +71,8 @@ def checkout():
     items = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     # calculate totals using helper
-    calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=body.get('promo_code'), user_id=user_id)
+    promo_code = body.get('promo_code')
+    calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=promo_code, user_id=user_id)
 
     subtotal = calc_res['subtotal_cents']
     discount = calc_res['discount_cents']
@@ -75,7 +88,8 @@ def checkout():
                 discount_cents=discount,
                 vat_cents=vat,
                 shipping_cost_cents=shipping_cost,
-                total_cents=total
+                total_cents=total,
+                promo_code=promo_code
             )
             # optionally store shipping country or address fields here
             db.session.add(new_order)
@@ -235,11 +249,18 @@ def edit_address(address_id):
 @login_required
 def shipping_methods():
     cart_info = session.get('cart', {})
+    if not cart_info:
+        return redirect(url_for('cart_bp.cart_page'))
+
     items = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     # Get the user's shipping address
     shipping_address = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
-    country_iso = shipping_address.country_iso_code if shipping_address else None
+    if not shipping_address:
+        flash('Please add a shipping address before proceeding.', 'warning')
+        return redirect(url_for('checkout_bp.shipping_address'))
+
+    country_iso = shipping_address.country_iso_code
 
     selected_shipping = session.get('shipping_method', 'standard')
     promo_code = session.get('promo_code')
@@ -260,6 +281,10 @@ def shipping_methods_save():
 @checkout_bp.route('/checkout/payment-methods', methods=['GET', 'POST'])
 @login_required
 def payment_methods():
+    cart_info = session.get('cart', {})
+    if not cart_info:
+        return redirect(url_for('cart_bp.cart_page'))
+
     if request.method == 'POST':
         payment_method = request.form.get('payment_method')
         if payment_method:
@@ -267,12 +292,20 @@ def payment_methods():
             return redirect(url_for('checkout_bp.summary'))
         flash('Please select a payment method.', 'danger')
 
-    cart_info = session.get('cart', {})
     items = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
     # Get the user's shipping address for calculation
-    shipping_address = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
-    country_iso = shipping_address.country_iso_code if shipping_address else None
+    shipping_address_obj = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
+    if not shipping_address_obj:
+        flash('Please add a shipping address before proceeding.', 'warning')
+        return redirect(url_for('checkout_bp.shipping_address'))
+
+    billing_address_obj = Address.query.filter_by(user_id=current_user.id, address_type='billing').first()
+    # Fallback to shipping address if billing address is not set
+    if not billing_address_obj:
+        billing_address_obj = shipping_address_obj
+
+    country_iso = shipping_address_obj.country_iso_code
 
     # We also need the shipping cost from the previous step
     # For now, we'll just recalculate based on standard or get from session if stored
@@ -290,12 +323,20 @@ def payment_methods():
 def summary():
     cart_info = session.get('cart', {})
     if not cart_info:
-        return redirect(url_for('shop_page'))
+        return redirect(url_for('cart_bp.cart_page'))
 
     items_list = [{"sku": sku, "quantity": qty} for sku, qty in cart_info.items()]
 
-    shipping_address = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
-    country_iso = shipping_address.country_iso_code if shipping_address else None
+    shipping_address_obj = Address.query.filter_by(user_id=current_user.id, address_type='shipping').first()
+    if not shipping_address_obj:
+        flash('Please add a shipping address before proceeding.', 'warning')
+        return redirect(url_for('checkout_bp.shipping_address'))
+
+    billing_address_obj = Address.query.filter_by(user_id=current_user.id, address_type='billing').first()
+    if not billing_address_obj:
+        billing_address_obj = shipping_address_obj
+
+    country_iso = shipping_address_obj.country_iso_code
 
     selected_shipping = session.get('shipping_method', 'standard')
     selected_payment = session.get('payment_method', 'card')
@@ -312,6 +353,19 @@ def summary():
         variants = Variant.query.filter(Variant.sku.in_(skus)).all()
         variant_map = {v.sku: v for v in variants}
 
+        def serialize_address(addr):
+            return {
+                "first_name": addr.first_name,
+                "last_name": addr.last_name,
+                "address_line_1": addr.address_line_1,
+                "address_line_2": addr.address_line_2,
+                "city": addr.city,
+                "state": addr.state,
+                "postal_code": addr.postal_code,
+                "country_iso_code": addr.country_iso_code,
+                "phone_number": addr.phone_number
+            }
+
         try:
             with db.session.begin_nested():
                 new_order = Order(
@@ -324,7 +378,10 @@ def summary():
                     total_cents=cart_summary['total_cents'],
                     shipping_method=selected_shipping,
                     payment_method=selected_payment,
-                    comment=comment
+                    comment=comment,
+                    promo_code=promo_code,
+                    shipping_address_snapshot=serialize_address(shipping_address_obj),
+                    billing_address_snapshot=serialize_address(billing_address_obj)
                 )
                 db.session.add(new_order)
                 db.session.flush()
@@ -374,7 +431,7 @@ def summary():
 
     return render_template('summary.html',
                            cart_summary=cart_summary,
-                           shipping_address=shipping_address,
+                           shipping_address=shipping_address_obj,
                            display_items=display_items,
                            selected_shipping=selected_shipping,
                            selected_payment=selected_payment)
